@@ -28,9 +28,14 @@ jobs:
       # DANGEROUS on purpose: pull_request_target + checkout of the PR head =
       # the workspace files (incl. the task-definition.json symlink) are the
       # untrusted contributor's.
+      # a vulnerable workflow reaches the untrusted head one of three ways: this
+      # opt-in flag, a manual `git fetch` of the PR ref, or a pinned older
+      # checkout without the guard. the flag is the cleanest to reproduce. the
+      # bug under test is render-task-definition's require(), not checkout.
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          allow-unsafe-pr-checkout: true
 
       - name: pre-check (payload not run yet)
         run: |
