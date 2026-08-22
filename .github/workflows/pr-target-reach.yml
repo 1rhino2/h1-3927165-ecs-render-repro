@@ -33,7 +33,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: pre-check (payload not run yet)
-        run: test -f RCE_PROOF && { echo "FAIL: proof already present"; exit 1; } || echo "ok, no proof yet"
+        run: |
+          test -f RCE_PROOF && { echo "FAIL - proof already present"; exit 1; } || echo "ok, no proof yet"
 
       - name: run vulnerable action (amazon-ecs-render-task-definition@v1)
         uses: aws-actions/amazon-ecs-render-task-definition@v1
