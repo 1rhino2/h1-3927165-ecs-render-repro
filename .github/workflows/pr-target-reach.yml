@@ -8,8 +8,12 @@ on:
   pull_request_target:
     branches: [main]
 
+# a real render+deploy workflow grants write (to comment/update deployments) and
+# id-token: write (OIDC to AWS). granting them here makes the token the attacker
+# payload reaches a WRITE-scoped one, which is the supply-chain reach.
 permissions:
-  contents: read
+  contents: write
+  id-token: write
 
 jobs:
   render:
@@ -48,7 +52,7 @@ jobs:
           container-name: web
           image: example:latest
 
-      - name: post-check (RCE from fork PR, in a job carrying the write token)
+      - name: post-check (RCE from fork PR, base-repo write GITHUB_TOKEN reachable)
         run: |
           test -f RCE_PROOF || { echo "RCE_PROOF missing, exploit did not fire"; exit 1; }
           echo "RCE from untrusted fork PR head, executed by require() in a privileged job:"
